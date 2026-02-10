@@ -11,6 +11,7 @@ import ConversationSubtitles from "./ConversationSubtitles";
 const STATE_LABELS: Record<string, string> = {
   idle: "",
   listening: "Escuchando...",
+  active: "Te escucho...",
   processing: "Procesando...",
   speaking: "Hablando...",
 };
@@ -25,6 +26,7 @@ export default function VoiceOverlay() {
 
   const { handleSpeechEnd, triggerGreeting, stopAudio, abort } = useVoiceAgent();
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
+  const [userSpeaking, setUserSpeaking] = useState(false);
   const analyserRef = useAudioAnalyser(micStream);
   const greetingTriggered = useRef(false);
 
@@ -36,17 +38,21 @@ export default function VoiceOverlay() {
     baseAssetPath: "/vad/",
     onnxWASMBasePath: "/vad/",
     positiveSpeechThreshold: 0.5,
-    negativeSpeechThreshold: 0.25,
+    negativeSpeechThreshold: 0.15,
     minSpeechMs: 500,
     preSpeechPadMs: 300,
-    redemptionMs: 300,
+    redemptionMs: 700,
+    onSpeechStart: () => {
+      setUserSpeaking(true);
+    },
     onSpeechEnd: (audio: Float32Array) => {
+      setUserSpeaking(false);
       if (sessionStateRef.current === "listening") {
         handleSpeechEnd(audio);
       }
     },
     onVADMisfire: () => {
-      // Speech was too short, ignore
+      setUserSpeaking(false);
     },
   });
 
@@ -132,7 +138,9 @@ export default function VoiceOverlay() {
 
       {/* State label */}
       <p className="text-sm text-[#009330] font-medium mb-6 h-5">
-        {STATE_LABELS[sessionState] || ""}
+        {userSpeaking && sessionState === "listening"
+          ? STATE_LABELS.active
+          : STATE_LABELS[sessionState] || ""}
       </p>
 
       {/* Visualizer */}
