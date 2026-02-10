@@ -167,25 +167,32 @@ export function useVoiceAgent() {
       });
       const agentResponse = await chatRes.json();
 
-      // Fetch TTS before showing text so they appear together
-      setSessionState("speaking");
-      let audioBlob: Blob;
-      if (greetingAudioRef.current) {
-        audioBlob = greetingAudioRef.current;
-      } else {
-        const ttsRes = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: agentResponse.message }),
-          signal,
-        });
-        audioBlob = await ttsRes.blob();
-        greetingAudioRef.current = audioBlob;
-      }
+      // Show greeting text immediately (don't wait for TTS)
       addMessage({ role: "assistant", content: agentResponse.message });
-      playAudio(audioBlob, () => {
+
+      // Attempt TTS — best-effort, proceed to listening if it fails
+      try {
+        setSessionState("speaking");
+        let audioBlob: Blob;
+        if (greetingAudioRef.current) {
+          audioBlob = greetingAudioRef.current;
+        } else {
+          const ttsRes = await fetch("/api/tts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: agentResponse.message }),
+            signal,
+          });
+          audioBlob = await ttsRes.blob();
+          greetingAudioRef.current = audioBlob;
+        }
+        playAudio(audioBlob, () => {
+          setSessionState("listening");
+        });
+      } catch {
+        // TTS failed — skip audio, go straight to listening
         setSessionState("listening");
-      });
+      }
     } catch (error) {
       if ((error as Error).name === "AbortError") return;
       console.error("Greeting error:", error);
