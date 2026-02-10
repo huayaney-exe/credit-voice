@@ -1,11 +1,13 @@
 "use client";
 
 import { useVoiceSession } from "@/context/VoiceSessionContext";
+import { warmupAudio } from "@/lib/audio-element";
 
 export default function VoiceButton() {
   const { setIsVoiceOverlayOpen, clearConversation } = useVoiceSession();
 
   const handleClick = () => {
+    warmupAudio(); // Unlock audio on mobile during user gesture
     clearConversation();
     setIsVoiceOverlayOpen(true);
   };

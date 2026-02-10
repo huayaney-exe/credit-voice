@@ -1,46 +1,51 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
+import { getSharedAudioElement } from "@/lib/audio-element";
 
 export function useAudioPlayback() {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
 
   const playAudio = useCallback((audioBlob: Blob, onEnded?: () => void) => {
-    // Stop any currently playing audio first
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    const audio = getSharedAudioElement();
+
+    // Stop current playback
+    audio.pause();
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
     }
 
     const url = URL.createObjectURL(audioBlob);
-    const audio = new Audio(url);
-    audioRef.current = audio;
+    urlRef.current = url;
+    audio.src = url;
 
-    audio.onplay = () => setIsPlaying(true);
     audio.onended = () => {
-      setIsPlaying(false);
       URL.revokeObjectURL(url);
-      audioRef.current = null;
+      urlRef.current = null;
       onEnded?.();
     };
     audio.onerror = () => {
-      setIsPlaying(false);
       URL.revokeObjectURL(url);
-      audioRef.current = null;
+      urlRef.current = null;
       onEnded?.();
     };
 
-    audio.play();
+    audio.play().catch(() => {
+      // Play failed (e.g. audio not unlocked) — skip to next state
+      onEnded?.();
+    });
   }, []);
 
   const stopAudio = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      setIsPlaying(false);
+    const audio = getSharedAudioElement();
+    audio.pause();
+    audio.currentTime = 0;
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
     }
   }, []);
 
-  return { playAudio, stopAudio, isPlaying };
+  return { playAudio, stopAudio };
 }
