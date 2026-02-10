@@ -35,11 +35,11 @@ export default function VoiceOverlay() {
     startOnLoad: false,
     baseAssetPath: "/vad/",
     onnxWASMBasePath: "/vad/",
-    positiveSpeechThreshold: 0.35,
-    negativeSpeechThreshold: 0.35,
-    minSpeechMs: 400,
+    positiveSpeechThreshold: 0.5,
+    negativeSpeechThreshold: 0.25,
+    minSpeechMs: 500,
     preSpeechPadMs: 300,
-    redemptionMs: 250,
+    redemptionMs: 300,
     onSpeechEnd: (audio: Float32Array) => {
       if (sessionStateRef.current === "listening") {
         handleSpeechEnd(audio);
