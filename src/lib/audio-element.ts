@@ -1,9 +1,9 @@
 /**
  * Shared HTMLAudioElement singleton for mobile-compatible audio playback.
  *
- * Mobile browsers (iOS Safari, Chrome Android) block audio.play() unless
- * it's triggered during a user gesture. By creating ONE element and
- * "unlocking" it on the first tap, all subsequent plays work reliably.
+ * iOS Safari and Chrome Android block audio.play() unless triggered during
+ * a user gesture. The element MUST be DOM-attached with playsinline for iOS.
+ * By "unlocking" it on the first tap, all subsequent plays work reliably.
  */
 
 let sharedAudio: HTMLAudioElement | null = null;
@@ -14,7 +14,11 @@ const SILENT_WAV =
 
 export function getSharedAudioElement(): HTMLAudioElement {
   if (!sharedAudio) {
-    sharedAudio = new Audio();
+    sharedAudio = document.createElement("audio");
+    sharedAudio.setAttribute("playsinline", "");
+    sharedAudio.setAttribute("webkit-playsinline", "");
+    sharedAudio.style.display = "none";
+    document.body.appendChild(sharedAudio);
   }
   return sharedAudio;
 }
@@ -26,6 +30,7 @@ export function getSharedAudioElement(): HTMLAudioElement {
 export function warmupAudio(): void {
   const audio = getSharedAudioElement();
   audio.src = SILENT_WAV;
+  audio.load();
   audio.play().then(() => {
     audio.pause();
     audio.currentTime = 0;

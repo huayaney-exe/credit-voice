@@ -117,10 +117,7 @@ export function useVoiceAgent() {
           return merged;
         });
 
-        // 6. Add assistant message
-        addMessage({ role: "assistant", content: agentResponse.message });
-
-        // 7. Play TTS (non-blocking — allows interruption)
+        // 6. Fetch TTS audio before showing text (so they appear together)
         setSessionState("speaking");
         const ttsRes = await fetch("/api/tts", {
           method: "POST",
@@ -129,6 +126,9 @@ export function useVoiceAgent() {
           signal,
         });
         const audioBlob = await ttsRes.blob();
+
+        // 7. Show text + play audio simultaneously
+        addMessage({ role: "assistant", content: agentResponse.message });
         playAudio(audioBlob, () => {
           if (agentResponse.isComplete) {
             setSessionState("idle");
@@ -167,9 +167,7 @@ export function useVoiceAgent() {
       });
       const agentResponse = await chatRes.json();
 
-      addMessage({ role: "assistant", content: agentResponse.message });
-
-      // Cache greeting audio or use cached version
+      // Fetch TTS before showing text so they appear together
       setSessionState("speaking");
       let audioBlob: Blob;
       if (greetingAudioRef.current) {
@@ -184,6 +182,7 @@ export function useVoiceAgent() {
         audioBlob = await ttsRes.blob();
         greetingAudioRef.current = audioBlob;
       }
+      addMessage({ role: "assistant", content: agentResponse.message });
       playAudio(audioBlob, () => {
         setSessionState("listening");
       });

@@ -74,11 +74,10 @@ export default function VoiceOverlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVoiceOverlayOpen, vad.listening]);
 
-  // Start VAD and trigger greeting when overlay opens
+  // Trigger greeting when overlay opens — VAD starts after greeting via state effect
   useEffect(() => {
     if (isVoiceOverlayOpen && !greetingTriggered.current) {
       greetingTriggered.current = true;
-      vad.start();
       triggerGreeting();
     }
     if (!isVoiceOverlayOpen) {

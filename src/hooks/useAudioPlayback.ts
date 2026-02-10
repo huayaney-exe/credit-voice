@@ -19,6 +19,7 @@ export function useAudioPlayback() {
     const url = URL.createObjectURL(audioBlob);
     urlRef.current = url;
     audio.src = url;
+    audio.load();
 
     audio.onended = () => {
       URL.revokeObjectURL(url);
