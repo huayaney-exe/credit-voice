@@ -35,19 +35,13 @@ export default function VoiceOverlay() {
     startOnLoad: false,
     baseAssetPath: "/vad/",
     onnxWASMBasePath: "/vad/",
-    positiveSpeechThreshold: 0.5,
-    minSpeechMs: 500,
+    positiveSpeechThreshold: 0.35,
+    negativeSpeechThreshold: 0.35,
+    minSpeechMs: 400,
     preSpeechPadMs: 300,
-    onSpeechStart: () => {
-      // Interrupt: cut TTS immediately when user starts speaking
-      if (sessionStateRef.current === "speaking") {
-        stopAudio();
-      }
-    },
+    redemptionMs: 250,
     onSpeechEnd: (audio: Float32Array) => {
-      const state = sessionStateRef.current;
-      if (state === "listening" || state === "speaking") {
-        stopAudio(); // ensure TTS is stopped
+      if (sessionStateRef.current === "listening") {
         handleSpeechEnd(audio);
       }
     },
@@ -88,14 +82,14 @@ export default function VoiceOverlay() {
   }, [isVoiceOverlayOpen]);
 
   // Pause/resume VAD based on session state
-  // Keep VAD active during "speaking" to allow interruption
+  // VAD only active during "listening" — paused during speaking to prevent TTS feedback
   useEffect(() => {
     if (!isVoiceOverlayOpen) return;
 
-    if (sessionState === "listening" || sessionState === "speaking") {
+    if (sessionState === "listening") {
       vad.start();
     } else {
-      vad.pause(); // pause during "processing" and "idle"
+      vad.pause();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionState, isVoiceOverlayOpen]);
