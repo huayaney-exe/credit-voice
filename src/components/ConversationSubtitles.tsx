@@ -22,8 +22,8 @@ export default function ConversationSubtitles() {
               animate-[fadeIn_0.3s_ease-in]
               ${
                 msg.role === "user"
-                  ? "bg-white/10 text-gray-300"
-                  : "bg-[#009330]/15 text-green-200"
+                  ? "bg-gray-100 text-gray-700"
+                  : "bg-[#E6F5EA] text-[#004D14]"
               }
             `}
           >

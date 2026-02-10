@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     voice: "nova",
     input: text,
     response_format: "mp3",
+    speed: 1.15,
   });
 
   return new Response(response.body, {

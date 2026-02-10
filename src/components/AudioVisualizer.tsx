@@ -167,7 +167,7 @@ export default function AudioVisualizer({
 
         ctx.beginPath();
         ctx.arc(p.x, p.y, Math.max(0.5, p.size), 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(150, ${saturation}%, ${lightness}%, ${Math.min(1, alpha)})`;
+        ctx.fillStyle = `hsla(148, ${saturation}%, ${lightness}%, ${Math.min(1, alpha)})`;
         ctx.fill();
       }
 

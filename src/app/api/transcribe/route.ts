@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
     model: "whisper-1",
     language: "es",
     response_format: "text",
+    prompt: "Solicitud de crédito, nombre, dirección, monto, ingreso, gasto, celular, cédula.",
   });
 
   return NextResponse.json({ text: transcription });

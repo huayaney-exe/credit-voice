@@ -24,9 +24,12 @@ export function useVoiceAgent() {
   formFieldsRef.current = formFields;
   const historyRef = useRef(conversationHistory);
   historyRef.current = conversationHistory;
+  const isProcessingRef = useRef(false);
 
   const handleSpeechEnd = useCallback(
     async (audioFloat32: Float32Array) => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
       setSessionState("processing");
 
       try {
@@ -98,6 +101,8 @@ export function useVoiceAgent() {
       } catch (error) {
         console.error("Voice agent error:", error);
         setSessionState("listening");
+      } finally {
+        isProcessingRef.current = false;
       }
     },
     [addMessage, playAudio, setFormFields, setSessionState, setIsVoiceOverlayOpen]

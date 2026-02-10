@@ -114,14 +114,14 @@ export default function VoiceOverlay() {
   if (!isVoiceOverlayOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-950/95 backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
       {/* Close button */}
       <button
         onClick={handleClose}
-        className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+        className="absolute top-6 right-6 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
       >
         <svg
-          className="w-5 h-5 text-gray-400"
+          className="w-5 h-5 text-gray-500"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -136,7 +136,7 @@ export default function VoiceOverlay() {
       </button>
 
       {/* State label */}
-      <p className="text-sm text-green-300/70 mb-6 h-5">
+      <p className="text-sm text-[#009330] font-medium mb-6 h-5">
         {STATE_LABELS[sessionState] || ""}
       </p>
 
@@ -152,7 +152,7 @@ export default function VoiceOverlay() {
       </div>
 
       {/* Hint */}
-      <p className="absolute bottom-8 text-xs text-gray-600">
+      <p className="absolute bottom-8 text-xs text-gray-400">
         Habla naturalmente — el agente te ira guiando
       </p>
     </div>
