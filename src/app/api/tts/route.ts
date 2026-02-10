@@ -1,4 +1,5 @@
-import openai from "@/lib/openai";
+import { experimental_generateSpeech as generateSpeech } from "ai";
+import { openai } from "@/lib/openai";
 import { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -8,15 +9,16 @@ export async function POST(req: NextRequest) {
     return new Response("No text provided", { status: 400 });
   }
 
-  const response = await openai.audio.speech.create({
-    model: "tts-1",
+  const { audio } = await generateSpeech({
+    model: openai.speech("tts-1"),
+    text,
     voice: "nova",
-    input: text,
-    response_format: "mp3",
     speed: 1.15,
   });
 
-  return new Response(response.body, {
+  const buffer = Buffer.from(audio.uint8Array);
+
+  return new Response(buffer, {
     headers: {
       "Content-Type": "audio/mpeg",
     },

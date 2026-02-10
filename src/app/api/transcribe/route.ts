@@ -1,4 +1,5 @@
-import openai from "@/lib/openai";
+import { experimental_transcribe as transcribe } from "ai";
+import { openai } from "@/lib/openai";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -9,13 +10,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No audio file" }, { status: 400 });
   }
 
-  const transcription = await openai.audio.transcriptions.create({
-    file: audioFile,
-    model: "whisper-1",
-    language: "es",
-    response_format: "text",
-    prompt: "Solicitud de crédito, nombre, dirección, monto, ingreso, gasto, celular, cédula.",
+  const { text } = await transcribe({
+    model: openai.transcription("whisper-1"),
+    audio: Buffer.from(await audioFile.arrayBuffer()),
+    providerOptions: {
+      openai: {
+        language: "es",
+        prompt: "Solicitud de crédito, nombre, dirección, monto, ingreso, gasto, celular, cédula.",
+      },
+    },
   });
 
-  return NextResponse.json({ text: transcription });
+  return NextResponse.json({ text });
 }

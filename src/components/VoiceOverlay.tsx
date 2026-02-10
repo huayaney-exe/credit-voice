@@ -23,7 +23,7 @@ export default function VoiceOverlay() {
     setSessionState,
   } = useVoiceSession();
 
-  const { handleSpeechEnd, triggerGreeting, stopAudio } = useVoiceAgent();
+  const { handleSpeechEnd, triggerGreeting, stopAudio, abort } = useVoiceAgent();
   const [micStream, setMicStream] = useState<MediaStream | null>(null);
   const analyserRef = useAudioAnalyser(micStream);
   const greetingTriggered = useRef(false);
@@ -101,6 +101,7 @@ export default function VoiceOverlay() {
   }, [sessionState, isVoiceOverlayOpen]);
 
   const handleClose = () => {
+    abort();
     vad.pause();
     stopAudio();
     setSessionState("idle");

@@ -6,13 +6,34 @@ import { useAudioPlayback } from "./useAudioPlayback";
 import { float32ToWav } from "@/lib/audio-utils";
 import { CreditFormFields } from "@/types";
 
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 2,
+  backoffMs = 500
+): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    } catch (error) {
+      lastError = error as Error;
+      if (i < retries) {
+        await new Promise((r) => setTimeout(r, backoffMs * Math.pow(2, i)));
+      }
+    }
+  }
+  throw lastError;
+}
+
 export function useVoiceAgent() {
   const {
     formFields,
     setFormFields,
     conversationHistory,
     addMessage,
-    sessionState,
     setSessionState,
     setIsVoiceOverlayOpen,
   } = useVoiceSession();
@@ -25,23 +46,36 @@ export function useVoiceAgent() {
   const historyRef = useRef(conversationHistory);
   historyRef.current = conversationHistory;
   const isProcessingRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const greetingAudioRef = useRef<Blob | null>(null);
+
+  const abort = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
 
   const handleSpeechEnd = useCallback(
     async (audioFloat32: Float32Array) => {
       if (isProcessingRef.current) return;
       isProcessingRef.current = true;
+
+      abort();
+      abortRef.current = new AbortController();
+      const signal = abortRef.current.signal;
+
       setSessionState("processing");
 
       try {
         // 1. Convert to WAV
         const wavBlob = float32ToWav(audioFloat32, 16000);
 
-        // 2. Transcribe
+        // 2. Transcribe (no retry — user can re-speak)
         const formData = new FormData();
         formData.append("audio", wavBlob, "speech.wav");
         const transcribeRes = await fetch("/api/transcribe", {
           method: "POST",
           body: formData,
+          signal,
         });
         const { text } = await transcribeRes.json();
 
@@ -53,16 +87,21 @@ export function useVoiceAgent() {
         // 3. Add user message
         addMessage({ role: "user", content: text });
 
-        // 4. Chat with agent
-        const chatRes = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            transcription: text,
-            history: historyRef.current,
-            currentFields: formFieldsRef.current,
-          }),
-        });
+        // 4. Chat with agent (retry on failure)
+        const chatRes = await fetchWithRetry(
+          "/api/chat",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              transcription: text,
+              history: historyRef.current,
+              currentFields: formFieldsRef.current,
+            }),
+            signal,
+          },
+          2
+        );
         const agentResponse = await chatRes.json();
 
         // 5. Merge extracted fields
@@ -87,10 +126,10 @@ export function useVoiceAgent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: agentResponse.message }),
+          signal,
         });
         const audioBlob = await ttsRes.blob();
         playAudio(audioBlob, () => {
-          // Called when TTS finishes naturally (not interrupted)
           if (agentResponse.isComplete) {
             setSessionState("idle");
             setTimeout(() => setIsVoiceOverlayOpen(false), 1500);
@@ -99,16 +138,20 @@ export function useVoiceAgent() {
           }
         });
       } catch (error) {
+        if ((error as Error).name === "AbortError") return;
         console.error("Voice agent error:", error);
         setSessionState("listening");
       } finally {
         isProcessingRef.current = false;
       }
     },
-    [addMessage, playAudio, setFormFields, setSessionState, setIsVoiceOverlayOpen]
+    [abort, addMessage, playAudio, setFormFields, setSessionState, setIsVoiceOverlayOpen]
   );
 
   const triggerGreeting = useCallback(async () => {
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
     setSessionState("processing");
 
     try {
@@ -120,26 +163,36 @@ export function useVoiceAgent() {
           history: [],
           currentFields: formFieldsRef.current,
         }),
+        signal,
       });
       const agentResponse = await chatRes.json();
 
       addMessage({ role: "assistant", content: agentResponse.message });
 
+      // Cache greeting audio or use cached version
       setSessionState("speaking");
-      const ttsRes = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: agentResponse.message }),
-      });
-      const audioBlob = await ttsRes.blob();
+      let audioBlob: Blob;
+      if (greetingAudioRef.current) {
+        audioBlob = greetingAudioRef.current;
+      } else {
+        const ttsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: agentResponse.message }),
+          signal,
+        });
+        audioBlob = await ttsRes.blob();
+        greetingAudioRef.current = audioBlob;
+      }
       playAudio(audioBlob, () => {
         setSessionState("listening");
       });
     } catch (error) {
+      if ((error as Error).name === "AbortError") return;
       console.error("Greeting error:", error);
       setSessionState("listening");
     }
   }, [addMessage, playAudio, setSessionState]);
 
-  return { handleSpeechEnd, triggerGreeting, stopAudio, sessionState };
+  return { handleSpeechEnd, triggerGreeting, stopAudio, abort };
 }

@@ -1,22 +1,28 @@
-export interface CreditFormFields {
-  nombreCompleto: string | null;
-  direccion: string | null;
-  montoCredito: string | null;
-  ingresoMensual: string | null;
-  gastoMensual: string | null;
-  numeroCelular: string | null;
-  cedula: string | null;
-}
+import { z } from "zod";
+
+export const creditFormFieldsSchema = z.object({
+  nombreCompleto: z.string().nullable(),
+  direccion: z.string().nullable(),
+  montoCredito: z.string().nullable(),
+  ingresoMensual: z.string().nullable(),
+  gastoMensual: z.string().nullable(),
+  numeroCelular: z.string().nullable(),
+  cedula: z.string().nullable(),
+});
+
+export type CreditFormFields = z.infer<typeof creditFormFieldsSchema>;
+
+export const agentResponseSchema = z.object({
+  message: z.string(),
+  extractedFields: creditFormFieldsSchema,
+  isComplete: z.boolean(),
+});
+
+export type AgentResponse = z.infer<typeof agentResponseSchema>;
 
 export interface ConversationMessage {
   role: "user" | "assistant" | "system";
   content: string;
-}
-
-export interface AgentResponse {
-  message: string;
-  extractedFields: Partial<CreditFormFields>;
-  isComplete: boolean;
 }
 
 export type VoiceSessionState = "idle" | "listening" | "processing" | "speaking";
